@@ -5,6 +5,10 @@ import { cn } from "@/lib/utils";
 
 const QUERY = "(prefers-reduced-motion: reduce)";
 
+/** Seconds for the pencil to arrive, and to leave once the line is ruled. */
+const FADE_IN = 0.25;
+const FADE_OUT = 0.3;
+
 /**
  * Reads the media query as an external store rather than mirroring it into
  * state from an effect: the server snapshot is a plain `false`, so there is no
@@ -26,7 +30,11 @@ function usePrefersReducedMotion(): boolean {
 export type PencilRuleProps = {
   /** Seconds for the pencil to cross the full width. */
   duration?: number;
-  /** Seconds to wait after the trigger fires. */
+  /**
+   * Seconds to wait after the trigger fires before the pencil arrives. Nothing
+   * is visible until then — set it past a page's entrance animations so the
+   * rule reads as the last thing to happen.
+   */
   delay?: number;
   /** Draw on mount instead of when scrolled into view. */
   trigger?: "in-view" | "mount";
@@ -69,6 +77,11 @@ export type PencilRuleProps = {
  * The consequence is that it stands well above its own row while drawing, which
  * is why the host is not `overflow-hidden` and why callers should leave a
  * little headroom above a rule that animates.
+ *
+ * The pencil fades in on `delay` rather than waiting there in full view for its
+ * cue. `delay` is therefore the moment it *arrives*, which is what makes it
+ * composable with a staggered page: set it past the last entrance animation and
+ * the rule reads as the last thing to happen rather than the first.
  *
  * Under reduced motion the finished line is rendered immediately and the pencil
  * never appears; the rule's job is to be a rule, and the drawing is decoration.
@@ -152,10 +165,14 @@ export function PencilRule({
           className="absolute inset-x-0 top-1/2 h-0"
           style={{
             transform: `translateX(${complete ? 100 : 0}%)`,
-            opacity: complete ? 0 : 1,
+            // Fades IN as the draw begins, on the same delay as the movement.
+            // Without this the pencil is simply present from the first painted
+            // frame — sitting at the start of the line, fully opaque, while the
+            // rest of the page is still fading in around it.
+            opacity: complete ? 1 : 0,
             transitionProperty: "transform, opacity",
-            transitionDuration: `${duration}s, 0.3s`,
-            transitionDelay: `${delay}s, ${delay + duration}s`,
+            transitionDuration: `${duration}s, ${FADE_IN}s`,
+            transitionDelay: `${delay}s, ${delay}s`,
             transitionTimingFunction: "cubic-bezier(0.22, 0.61, 0.36, 1), linear",
           }}
         >
@@ -168,6 +185,15 @@ export function PencilRule({
             style={{
               transform: `translateY(-50%) rotate(${-angle}deg)`,
               transformOrigin: "0% 50%",
+              // Fades OUT once the line is ruled. The arrival and the departure
+              // live on separate elements so their opacities multiply — one
+              // transition cannot describe a hold between two fades, and a
+              // keyframe that could would need percentages computed from
+              // `duration`, which is a prop.
+              opacity: complete ? 0 : 1,
+              transitionProperty: "opacity",
+              transitionDuration: `${FADE_OUT}s`,
+              transitionDelay: `${delay + duration}s`,
             }}
           >
             <Pencil color={pencilColor} />
