@@ -40,8 +40,35 @@ logs). The database is the record; email is just the nudge.
 ```bash
 bun run build      # production build
 bun run lint
-bunx tsc --noEmit  # typecheck
+bun run typecheck
+bun run icons      # rebuild the rasters from src/app/icon.svg
+bun run icons:draw # redraw the SVG from design/favicon/generate.py, then the rasters
 ```
+
+## the icon
+
+An ascii-shaded hex nut on a black disc — a sibling to the donut on
+justin06lee.dev, the cup on coffee.justin06lee.dev and the hourglass on
+hours.justin06lee.dev. Same pipeline: a real form is raymarched, lit, sampled
+onto a 30×30 character grid, and each cell drawn as the rect skeleton of the
+glyph its luminance lands on.
+
+It is the **same hex nut the hero raymarches**, which is the point of picking it
+— the mark in the tab and the thing turning over on the page are one object.
+
+`design/favicon/generate.py` draws it; `--preview` prints the character grid to
+stdout, which is the fastest way to judge the mark before rasterising anything.
+`src/app/icon.svg` is the only icon committed — `favicon.ico` and
+`apple-icon.png` are derived by `scripts/build-icons.mjs` (wired to `predev` and
+`prebuild`) and gitignored, because a checked-in binary beside the drawing that
+produced it is a copy waiting to go stale.
+
+Two things differ from the round siblings. The silhouette is a polygon, so the
+rim term is stronger — corners are the only feature that survives downsampling
+to 16px, and they only survive if the outline is the brightest thing in the
+mark. And a faceted object shades in flat steps rather than a gradient, so a
+slight fall-off with distance spreads the tones across the ramp the way a
+surface of revolution does for free.
 
 ## how it's put together
 
