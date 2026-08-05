@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+/* Scrollbars are hidden site-wide (still functional, just invisible) to match
+   justin06lee.dev. The html rule only covers the page scroller, so inner
+   overflow containers need the universal rule too. */
+html {
+  overflow-x: hidden;
+  scrollbar-width: none;
+}
+html::-webkit-scrollbar {
+  display: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html,
+body {
+  overscroll-behavior: none;
+}
+
+/* @chrome:theme */
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("https://cdn.jsdelivr.net/fontsource/fonts/poppins@latest/latin-400-normal.woff2")
+    format("woff2");
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --font-sans: "Poppins", sans-serif;
+  --font-mono: var(--font-geist-mono);
+}
+
+:root,
+.dark {
+  --background: #000000;
+  --foreground: #ffffff;
+  --surface: #0a0a0a;
+  --surface-alt: #141414;
+  --border: rgba(255, 255, 255, 0.12);
+  --muted: rgba(255, 255, 255, 0.6);
+  --accent: #ffffff;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+/* @chrome:end */
+
+/* ---------------------------------------------------------------- oddjob --
+   Two accent tokens on top of the house black-and-white. The chrome registry
+   is deliberately monochrome; every component that takes colour takes it
+   through a prop, so the palette lives here and nowhere in the components.
+
+   hazard is the only interactive accent: the submit button, the active step,
+   required marks, the stripes. blueprint is never text — grid lines, rules and
+   dimension marks only. Everything else stays white at the usual opacities. */
+@theme inline {
+  --color-hazard: var(--hazard);
+  --color-blueprint: var(--blueprint);
+}
+
+:root,
+.dark {
+  --hazard: #ff6a00;
+  --hazard-dim: rgba(255, 106, 0, 0.5);
+  --hazard-faint: rgba(255, 106, 0, 0.12);
+  --blueprint: #2b6cff;
+  --blueprint-line: rgba(43, 108, 255, 0.14);
+  --blueprint-major: rgba(43, 108, 255, 0.22);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* The one selection colour on the site — hazard, at low enough alpha that
+   selected text stays readable rather than inverting. */
+::selection {
+  background: var(--hazard-faint);
+  color: #fff;
+}
+
+/* Focus rings inherit the accent instead of the browser default, so keyboard
+   navigation reads as part of the design rather than as an escape hatch. */
+:focus-visible {
+  outline: 1px solid var(--hazard);
+  outline-offset: 2px;
+}
