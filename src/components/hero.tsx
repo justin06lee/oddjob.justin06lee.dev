@@ -28,13 +28,16 @@ export function Hero() {
           </h1>
         </FadeIn>
 
-        {/* The pencil rules the line under the headline as the page settles. */}
+        {/* The pencil rules the line under the headline as the page settles.
+            mt-3 rather than mt-2 because the pencil is tilted and stands above
+            its own row — the extra step keeps it clear of the headline's
+            descenders while it draws. */}
         <PencilRule
           trigger="mount"
           delay={0.9}
           duration={1.4}
           color="var(--blueprint)"
-          className="mt-2 max-w-md"
+          className="mt-3 max-w-md"
         />
 
         <FadeIn delay={0.25}>
