@@ -1,36 +1,84 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# oddjob.justin06lee.dev
 
-## Getting Started
+Where people ask me to build things. A work-order intake, a numbered docket
+back, and an inbox to read them in.
 
-First, run the development server:
+Same house style as [justin06lee.dev](https://justin06lee.dev) — dark, square,
+Poppins, [chrome](https://chrome.justin06lee.dev) components — wearing a hi-vis
+vest: a blueprint grid substrate, hazard tape, and exactly two accent colours.
+
+## surfaces
+
+| route | what |
+|---|---|
+| `/` | hero — a raymarched ascii hex nut, a pencil that rules its own line, and two doors |
+| `/request` | the three-step work order, plus a downloadable template and a dropzone for a written spec |
+| `/login` | admin login (rate-limited, generic failure message) |
+| `/admin` | the inbox: filter by status, paginated |
+| `/admin/[id]` | one work order — full brief, links, attachments, status, private notes |
+
+Anyone who'd rather talk than type is sent to
+[coffee.justin06lee.dev](https://coffee.justin06lee.dev).
+
+## running it
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+bun install
+cp .env.example .env.local   # fill it in
+bun run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`.env.example` names every variable. The Turso credentials and `ADMIN_KEY` are
+the same ones the other justin06lee.dev sites use — this site's tables are
+namespaced `oddjob_` and its session cookie is its own, so a token from another
+site doesn't unlock this one.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Without `RESEND_API_KEY` the site still works: work orders are saved and appear
+in `/admin`, and only the notification emails are skipped (with a warning in the
+logs). The database is the record; email is just the nudge.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+bun run build      # production build
+bun run lint
+bunx tsc --noEmit  # typecheck
+```
 
-## Learn More
+## how it's put together
 
-To learn more about Next.js, take a look at the following resources:
+- **`src/lib/work-order.ts`** — the vocabulary (job types, budgets, statuses),
+  the limits, and the validation. No database import, so the form and the server
+  action share one definition of a valid work order and can't drift.
+- **`src/lib/requests.ts`** — `server-only` storage. Reference numbers come from
+  a counter row rather than `COUNT(*) + 1`, so deleting a work order never hands
+  its number to the next one.
+- **`src/lib/db.ts`** — the Turso client, built on first use rather than at
+  import: Next imports every route to collect page data, and a module-scope
+  client turns a missing credential into a failed build instead of a failed
+  request.
+- **`src/lib/hero-shader.ts`** — the hex nut, as a signed distance field
+  evaluated per character cell. A pure `(x, y, t) => luminance`, so it drops
+  into chrome's `ascii-shader` with no WebGL context and no geometry.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Attachments are stored inline in the database, capped at 2 MB. There is no
+object store in this stack, and adding one for the occasional 200 kb spec would
+be the tail wagging the dog; anything bigger should be a link.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## the palette
 
-## Deploy on Vercel
+Two tokens, defined in `src/app/globals.css` and nowhere else:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| token | used for |
+|---|---|
+| `--hazard` `#ff6a00` | the one interactive accent — submit, active step, required marks, tape |
+| `--blueprint` `#2b6cff` | lines only. grid, rules, dimension marks. never text |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Everything else is white on black at the usual opacity ladder. The chrome
+components stay monochrome and take their colour through props, which is what
+keeps the registry reusable and this site recognisably part of the family.
+
+## components contributed back
+
+Building this added eleven components to the chrome registry rather than keeping
+them local: `ascii-shader`, `blueprint`, `hazard`, `dimension`, `pencil-rule`,
+`stamp`, `grain`, `marquee`, `dropzone`, `docket`, `pagination` — plus a
+character counter on `textarea`.
