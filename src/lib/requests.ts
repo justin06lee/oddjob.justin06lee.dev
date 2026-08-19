@@ -152,8 +152,19 @@ export async function listRequests(
   page = 1,
   status?: Status,
 ): Promise<{ requests: WorkRequest[]; total: number }> {
+  return listRequestsRange(PAGE_SIZE, (Math.max(1, page) - 1) * PAGE_SIZE, status);
+}
+
+/**
+ * The inbox pages speak page numbers; the admin API speaks limit/offset. Both
+ * land here so there is exactly one listing query to keep correct.
+ */
+export async function listRequestsRange(
+  limit: number,
+  offset: number,
+  status?: Status,
+): Promise<{ requests: WorkRequest[]; total: number }> {
   await initDb();
-  const offset = (Math.max(1, page) - 1) * PAGE_SIZE;
 
   const where = status ? "WHERE status = ?" : "";
   const filterArgs = status ? [status] : [];
@@ -162,7 +173,7 @@ export async function listRequests(
     db().execute({
       sql: `SELECT * FROM oddjob_requests ${where}
             ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-      args: [...filterArgs, PAGE_SIZE, offset],
+      args: [...filterArgs, limit, offset],
     }),
     db().execute({
       sql: `SELECT COUNT(*) AS n FROM oddjob_requests ${where}`,
@@ -186,6 +197,20 @@ export async function getRequest(id: string): Promise<WorkRequest | null> {
   return row ? toWorkRequest(row as unknown as DbRequest) : null;
 }
 
+/**
+ * The reference (OJ-0042) is the handle humans quote — the unique index in
+ * db.ts is what makes it a safe lookup key.
+ */
+export async function getRequestByReference(reference: string): Promise<WorkRequest | null> {
+  await initDb();
+  const result = await db().execute({
+    sql: "SELECT * FROM oddjob_requests WHERE reference = ?",
+    args: [reference],
+  });
+  const row = result.rows[0];
+  return row ? toWorkRequest(row as unknown as DbRequest) : null;
+}
+
 /** Metadata only — the blob stays out of any list or detail query. */
 export async function listAttachments(requestId: string): Promise<DbAttachment[]> {
   await initDb();
@@ -193,6 +218,19 @@ export async function listAttachments(requestId: string): Promise<DbAttachment[]
     sql: `SELECT id, request_id, filename, mime, size, created_at
           FROM oddjob_attachments WHERE request_id = ?`,
     args: [requestId],
+  });
+  return result.rows as unknown as DbAttachment[];
+}
+
+/** Metadata for a whole page of requests in one query, so a listing isn't N+1. */
+export async function listAttachmentsForRequests(requestIds: string[]): Promise<DbAttachment[]> {
+  if (requestIds.length === 0) return [];
+  await initDb();
+  const placeholders = requestIds.map(() => "?").join(", ");
+  const result = await db().execute({
+    sql: `SELECT id, request_id, filename, mime, size, created_at
+          FROM oddjob_attachments WHERE request_id IN (${placeholders})`,
+    args: requestIds,
   });
   return result.rows as unknown as DbAttachment[];
 }
