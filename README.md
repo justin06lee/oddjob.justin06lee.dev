@@ -20,6 +20,33 @@ vest: a blueprint grid substrate, hazard tape, and exactly two accent colours.
 Anyone who'd rather talk than type is sent to
 [coffee.justin06lee.dev](https://coffee.justin06lee.dev).
 
+## the admin api
+
+The same inbox over HTTP, for the MCP server and anything else that can hold a
+cookie. Auth is the exact session the browser gets: exchange the `ADMIN_KEY`
+for the `oddjob_admin_session` cookie and send it on every call. Same rate
+limiter as the login page — 10 attempts per 15 minutes, then a 24-hour lockout
+— though an empty password 401s without burning an attempt, so a client with a
+config hole can't lock the human out.
+
+| method | route | what |
+|---|---|---|
+| `POST` | `/api/auth` | `{password}` → sets the session cookie. 401 on a miss, 429 rate-limited, 503 if `ADMIN_KEY` is unset |
+| `GET` | `/api/auth` | is this cookie still a session? `{ok:true}` or 401 |
+| `DELETE` | `/api/auth` | destroy the caller's session, clear the cookie. always 200 |
+| `GET` | `/api/requests` | the inbox: `?status=` filters (400 on an unknown one), `?limit=` (default 15, max 100) and `?offset=` page it. `{requests, total, limit, offset}` |
+| `GET` | `/api/requests/[id]` | one work order, by row id **or** reference (`OJ-0042`) |
+| `PATCH` | `/api/requests/[id]` | `{status?, adminNotes?}` — status against the same allowlist as the pills, empty notes clear them. `{ok:true}` |
+| `DELETE` | `/api/requests/[id]` | delete the work order and its attachment. `{ok:true}` |
+| `GET` | `/admin/attachment/[id]` | the file itself, by attachment id — the pre-existing download route, same session |
+
+Rows are the camelCase `WorkRequest` shape plus `attachment` metadata
+(`{id, filename, mime, size}`, or `null`) — the blob never rides along in
+JSON; the bytes come from `/admin/attachment/[id]`. Errors are JSON `{error}`
+with the obvious status codes, and mutations make the same `revalidatePath`
+calls as the admin server actions, so the browser inbox never serves a stale
+page after an API write.
+
 ## running it
 
 ```bash
